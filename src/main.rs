@@ -10,8 +10,10 @@ use process::process_country_code;
 use reqwest::Client;
 use tokio::task::JoinHandle;
 
+/// メイン関数: 全体の流れを制御 (オーケストレーション)
 #[tokio::main(flavor = "multi_thread")]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    // RIRファイルのURLリスト
     let rir_urls = vec![
         "https://ftp.afrinic.net/pub/stats/afrinic/delegated-afrinic-extended-latest",
         "https://ftp.lacnic.net/pub/stats/lacnic/delegated-lacnic-extended-latest",
@@ -19,35 +21,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         "https://ftp.apnic.net/pub/stats/apnic/delegated-apnic-extended-latest",
         "https://ftp.arin.net/pub/stats/arin/delegated-arin-extended-latest",
     ];
-
-    // 複数国コードが指定されてもRIRファイルは1回ずつしかダウンロードしない
+    // 処理対象の国コードリスト
     let country_codes = vec!["JP", "US", "BR"];
-
+    // HTTPクライアントを生成
     let client = Client::new();
-
-    // RIRファイルをまとめて一度だけダウンロード
+    // RIRファイルをすべてダウンロード
     let rir_texts = download_all_rir_files(&client, &rir_urls).await?;
-
-    // 各国コードごとに処理を並行実行する
-    let mut tasks: Vec<JoinHandle<Result<(), Box<dyn std::error::Error + Send + Sync>>>> = vec![];
-    for code in country_codes {
-        let code_owned = code.to_string();
-        let rir_texts_clone = rir_texts.clone(); // 参照カウントのあるStringなら複製可能
-
-        let handle = tokio::spawn(async move {
-            // RIRのテキストを国コード別にパースしてファイル出力まで行う
-            if let Err(e) = process_country_code(&code_owned, &rir_texts_clone).await {
-                eprintln!("エラー (国コード: {}): {}", code_owned, e);
-            }
-            Ok(())
-        });
-
-        tasks.push(handle);
-    }
-
-    for t in tasks {
-        let _ = t.await?;
-    }
+    // ダウンロード済みのテキストと国コードで並行処理を実行
+    process_country_codes(&rir_texts, &country_codes).await?;
 
     Ok(())
 }
@@ -57,20 +38,21 @@ async fn download_all_rir_files(
     client: &Client,
     urls: &[&str],
 ) -> Result<Vec<String>, Box<dyn std::error::Error + Send + Sync>> {
-    let mut handles = vec![];
+    let mut handles = Vec::new();
 
     for url in urls {
         let url_owned = url.to_string();
         let client_ref = client.clone();
-        // fetch_with_retry関数をspawnして並行ダウンロード
+
+        // fetch_with_retry関数をspawnして並行ダウンロードする
         handles.push(tokio::spawn(async move {
             fetch_with_retry(&client_ref, &url_owned).await
         }));
     }
 
+    // 並行ダウンロード結果を収集
     let results = join_all(handles).await;
 
-    // 全ダウンロード結果をまとめる
     let mut rir_texts = Vec::new();
     for res in results {
         match res {
@@ -85,5 +67,39 @@ async fn download_all_rir_files(
             }
         }
     }
+
     Ok(rir_texts)
+}
+
+/// 指定された国コード一覧とダウンロード済みRIRテキストを使い、
+/// 国コードごとの処理を並行実行する
+async fn process_country_codes(
+    rir_texts: &[String],
+    country_codes: &[&str],
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let mut tasks: Vec<JoinHandle<Result<(), Box<dyn std::error::Error + Send + Sync>>>> =
+        Vec::new();
+
+    for &code in country_codes {
+        let code_owned = code.to_string();
+        let rir_texts_clone = rir_texts.to_vec();
+
+        // 国コード毎の処理をspawnして並行実行
+        let handle = tokio::spawn(async move {
+            // RIRのテキストを国コード別にパースしてファイル出力まで行う関数
+            if let Err(e) = process_country_code(&code_owned, &rir_texts_clone).await {
+                eprintln!("エラー (国コード: {}): {}", code_owned, e);
+            }
+            Ok(())
+        });
+
+        tasks.push(handle);
+    }
+
+    // 全タスクの終了を待機
+    for t in tasks {
+        t.await??;
+    }
+
+    Ok(())
 }
