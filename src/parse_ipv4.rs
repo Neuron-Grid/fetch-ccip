@@ -1,5 +1,5 @@
-/// largest_ipv4_block は、IPv4の範囲を部分的にサブネットへ分割する際、
-/// どこまで大きなCIDRブロックが取れるかを求める関数
+/// largest_ipv4_block は、IPv4の範囲をサブネットに分割するとき、
+/// どのサイズのCIDRブロックをとれるかを求める。
 pub fn largest_ipv4_block(current: u32, end: u32) -> u8 {
     let tz = current.trailing_zeros();
     let span = (end - current + 1).ilog2_sub1();
@@ -16,7 +16,7 @@ impl ILog2Sub1 for u32 {
         if *self == 0 {
             0
         } else {
-            // 2のべき乗分だけ考慮するときに使うヘルパー
+            // 2のべき乗の範囲を求めるときに使うヘルパー
             31 - self.leading_zeros()
         }
     }
