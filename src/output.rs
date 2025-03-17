@@ -3,18 +3,24 @@ use ipnet::IpNet;
 use std::collections::BTreeSet;
 use std::fs;
 
+/// IPv4/IPv6リストをファイルに書き出す。
 /// BTreeSetにより既にソート済みなので、ここでは再ソートしない。
-/// そのままファイルへ書き出す。
 pub fn sort_and_write(
     country_code: &str,
     ipv4_list: &BTreeSet<IpNet>,
     ipv6_list: &BTreeSet<IpNet>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    write_file(&format!("IPv4_{}.txt", country_code), ipv4_list)?;
-    write_file(&format!("IPv6_{}.txt", country_code), ipv6_list)?;
+    let ipv4_file = format!("IPv4_{}.txt", country_code);
+    let ipv6_file = format!("IPv6_{}.txt", country_code);
+
+    // 実際の書き込みを行うサブ関数呼び出し
+    write_file(&ipv4_file, ipv4_list)?;
+    write_file(&ipv6_file, ipv6_list)?;
+
     Ok(())
 }
 
+/// 実際にBTreeSetをテキストに変換し、ファイル書き込みする
 fn write_file(
     path: &str,
     nets: &BTreeSet<IpNet>,
@@ -29,11 +35,12 @@ fn write_file(
         now.minute()
     );
 
-    // BTreeSetの順序をそのまま使用し、再度のソートをしない
+    // BTreeSetの順序をそのまま利用
     let lines: Vec<String> = nets.iter().map(|net| net.to_string()).collect();
-
     let content = format!("{}{}", formatted_header, lines.join("\n"));
+
     fs::write(path, content)?;
     println!("ファイルに書き込みました: {}", path);
+
     Ok(())
 }
