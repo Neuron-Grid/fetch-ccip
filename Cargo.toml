@@ -5,6 +5,9 @@ edition = "2024"
 authors = ["Neuron Grid <neuron-grid@neuron-grid.net>"]
 license = "MIT"
 readme = "README.md"
+documentation = "https://docs.rs/fetch-ccip"
+homepage = "https://github.com/Neuron-Grid/fetch-ccip"
+repository = "https://github.com/Neuron-Grid/fetch-ccip"
 
 [dependencies]
 tokio = { version = "1.44.0", features = ["macros", "rt-multi-thread"] }
