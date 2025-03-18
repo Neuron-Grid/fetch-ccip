@@ -29,6 +29,7 @@ struct Cli {
     )]
     country_codes: Vec<String>,
 }
+
 #[tokio::main(flavor = "multi_thread")]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // コマンドライン引数解析
@@ -114,37 +115,4 @@ async fn download_all_rir_files(
     }
 
     Ok(rir_texts)
-}
-
-/// 指定された国コード一覧とダウンロード済みRIRテキストを使い、
-/// 国コードごとの処理を並行実行する
-async fn process_country_codes(
-    rir_texts: &[String],
-    country_codes: &[&str],
-) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let mut tasks: Vec<JoinHandle<Result<(), Box<dyn std::error::Error + Send + Sync>>>> =
-        Vec::new();
-
-    for &code in country_codes {
-        let code_owned = code.to_string();
-        let rir_texts_clone = rir_texts.to_vec();
-
-        // 国コード毎の処理をspawnして並行実行
-        let handle = tokio::spawn(async move {
-            // RIRのテキストを国コード別にパースしてファイル出力まで行う関数
-            if let Err(e) = process_country_code(&code_owned, &rir_texts_clone).await {
-                eprintln!("エラー (国コード: {}): {}", code_owned, e);
-            }
-            Ok(())
-        });
-
-        tasks.push(handle);
-    }
-
-    // 全タスクの終了を待機
-    for t in tasks {
-        t.await??;
-    }
-
-    Ok(())
 }

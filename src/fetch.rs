@@ -1,4 +1,5 @@
-use rand::{Rng, rng};
+use rand::Rng;
+use rand::thread_rng;
 use reqwest::Client;
 use std::time::Duration;
 use tokio::time::sleep;
