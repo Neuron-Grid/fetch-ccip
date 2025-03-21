@@ -1,16 +1,9 @@
 use clap::Parser;
+use fetch_ccip::fetch::fetch_with_retry;
+use fetch_ccip::process::process_country_code;
+use futures::future::join_all;
 use reqwest::Client;
 use tokio::task::JoinHandle;
-
-mod fetch;
-mod output;
-mod parse;
-mod parse_ipv4;
-mod process;
-
-use fetch::fetch_with_retry;
-use futures::future::join_all;
-use process::process_country_code;
 
 /// コマンドライン引数を処理するための構造体
 #[derive(Parser, Debug)]

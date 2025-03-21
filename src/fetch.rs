@@ -1,5 +1,5 @@
 use rand::Rng;
-use rand::thread_rng;
+use rand::rng;
 use reqwest::Client;
 use std::time::Duration;
 use tokio::time::sleep;
@@ -16,6 +16,8 @@ async fn fetch_once(
 
 /// RIRファイルを取得してテキストとして返す。
 /// リトライ + 指数バックオフ付き
+/// Tokioのマルチスレッド環境でエラーにならないように、乱数生成器 `rng()` は
+/// `.await` をまたぐ前にスコープから取り除き、値だけを取得して使う。
 pub async fn fetch_with_retry(
     client: &Client,
     url: &str,
@@ -35,7 +37,11 @@ pub async fn fetch_with_retry(
                     e
                 );
                 // 指数バックオフ + ランダムスリープ
-                let sleep_time = (2u64.pow(i) as f64) + thread_rng().gen_range(0.0..1.0);
+                let random_part = {
+                    let mut local_rng = rng();
+                    local_rng.random_range(0.0..1.0)
+                };
+                let sleep_time = (2u64.pow(i) as f64) + random_part;
                 sleep(Duration::from_secs_f64(sleep_time)).await;
             }
         }
