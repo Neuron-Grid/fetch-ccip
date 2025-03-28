@@ -1,10 +1,11 @@
-use rand::Rng;
-use rand::rng;
+use rand::{Rng, rng};
 use reqwest::Client;
 use std::time::Duration;
 use tokio::time::sleep;
 
-/// 1回だけHTTP GETを実行し、レスポンスのテキストを返す
+/// HTTP GETを1回だけ実行する。
+/// 成功時はレスポンスボディを文字列として返す。
+/// 失敗時はエラーを返す。
 async fn fetch_once(
     client: &Client,
     url: &str,
@@ -14,10 +15,9 @@ async fn fetch_once(
     Ok(text)
 }
 
-/// RIRファイルを取得してテキストとして返す。
-/// リトライ + 指数バックオフ付き
-/// Tokioのマルチスレッド環境でエラーにならないように、乱数生成器 `rng()` は
-/// `.await` をまたぐ前にスコープから取り除き、値だけを取得して使う。
+/// HTTP GETによるデータ取得を、リトライ+指数バックオフ付きで行う。
+/// 成功時はレスポンス文字列を返す。
+/// `retry_attempts`回失敗した場合、エラーを返す。
 pub async fn fetch_with_retry(
     client: &Client,
     url: &str,
@@ -27,29 +27,37 @@ pub async fn fetch_with_retry(
     for i in 0..retry_attempts {
         match fetch_once(client, url).await {
             Ok(text) => {
+                // 取得成功時はすぐ返す
                 return Ok(text);
             }
             Err(e) => {
                 eprintln!(
-                    "HTTP取得エラー (attempt {} / {}): {}",
+                    "[fetch_with_retry] Error on attempt {}/{}: {}",
                     i + 1,
                     retry_attempts,
                     e
                 );
                 // 指数バックオフ + ランダムスリープ
-                let random_part = {
-                    let mut local_rng = rng();
-                    local_rng.random_range(0.0..1.0)
-                };
-                let sleep_time = (2u64.pow(i) as f64) + random_part;
-                sleep(Duration::from_secs_f64(sleep_time)).await;
+                let sleep_duration = calc_exponential_backoff_duration(i);
+                sleep(sleep_duration).await;
             }
         }
     }
 
     Err(format!(
-        "{}回試みてもデータを取得できませんでした: {}",
-        retry_attempts, url
+        "Failed to fetch data from {} after {} attempts.",
+        url, retry_attempts
     )
     .into())
+}
+
+/// 指数バックオフのスリープ時間を計算するヘルパー関数
+fn calc_exponential_backoff_duration(retry_count: u32) -> Duration {
+    // ランダムな要素を加える
+    let mut rng = rng();
+    let random_part: f64 = rng.random();
+
+    let base = 2u64.pow(retry_count);
+    let backoff_seconds = (base as f64) + random_part;
+    Duration::from_secs_f64(backoff_seconds)
 }

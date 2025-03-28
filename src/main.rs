@@ -21,6 +21,16 @@ struct Cli {
         help = "Specify the code in this argument.\nExample: jp br us"
     )]
     country_codes: Vec<String>,
+
+    #[arg(
+        short = 'm',
+        long = "mode",
+        default_value = "overwrite",
+        required = true,
+        hide_default_value = true,
+        help = "Select file output mode: 'append' or 'overwrite'\ndefault: overwrite"
+    )]
+    mode: String,
 }
 
 #[tokio::main(flavor = "multi_thread")]
@@ -35,28 +45,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .map(|code| code.to_uppercase())
         .collect();
 
-    // ダウンロード対象のRIRファイル一覧
-    let rir_urls = vec![
-        "https://ftp.afrinic.net/pub/stats/afrinic/delegated-afrinic-extended-latest",
-        "https://ftp.lacnic.net/pub/stats/lacnic/delegated-lacnic-extended-latest",
-        "https://ftp.ripe.net/pub/stats/ripencc/delegated-ripencc-extended-latest",
-        "https://ftp.apnic.net/pub/stats/apnic/delegated-apnic-extended-latest",
-        "https://ftp.arin.net/pub/stats/arin/delegated-arin-extended-latest",
-    ];
-
     // HTTPクライアント生成
     let client = Client::new();
 
     // RIRファイルをすべてダウンロード
-    let rir_texts = download_all_rir_files(&client, &rir_urls).await?;
+    let rir_texts = download_all_rir_files(&client, &RIR_URLS).await?;
 
     // 各国コードごとに処理を並行実行
     let mut tasks: Vec<JoinHandle<Result<(), Box<dyn std::error::Error + Send + Sync>>>> = vec![];
     for code in country_codes {
         let rir_texts_clone = rir_texts.clone();
+        let mode_clone = args.mode.clone();
         let handle = tokio::spawn(async move {
             // 国コードごとにパース→ファイル出力
-            if let Err(e) = process_country_code(&code, &rir_texts_clone).await {
+            if let Err(e) = process_country_code(&code, &rir_texts_clone, &mode_clone).await {
                 eprintln!("エラー (国コード: {}): {}", code, e);
             }
             Ok(())
@@ -109,3 +111,12 @@ async fn download_all_rir_files(
 
     Ok(rir_texts)
 }
+
+// ダウンロード対象のRIRファイル一覧
+const RIR_URLS: &[&str] = &[
+    "https://ftp.afrinic.net/pub/stats/afrinic/delegated-afrinic-extended-latest",
+    "https://ftp.lacnic.net/pub/stats/lacnic/delegated-lacnic-extended-latest",
+    "https://ftp.ripe.net/pub/stats/ripencc/delegated-ripencc-extended-latest",
+    "https://ftp.apnic.net/pub/stats/apnic/delegated-apnic-extended-latest",
+    "https://ftp.arin.net/pub/stats/arin/delegated-arin-extended-latest",
+];

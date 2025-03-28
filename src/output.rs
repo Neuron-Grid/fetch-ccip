@@ -2,28 +2,35 @@ use chrono::{Datelike, Local, Timelike};
 use ipnet::IpNet;
 use std::collections::BTreeSet;
 use std::fs;
+use std::fs::OpenOptions;
+use std::io::Write;
+use std::path::Path;
 
-/// IPv4/IPv6リストをファイルに書き出す。
-/// BTreeSetにより既にソート済みなので、ここでは再ソートしない。
-pub fn sort_and_write(
+/// ソート済みのIPv4/IPv6リストをファイルに書き出すモジュール。
+/// すべてファイル出力で完結している。
+pub fn write_ip_lists_to_files(
     country_code: &str,
     ipv4_list: &BTreeSet<IpNet>,
     ipv6_list: &BTreeSet<IpNet>,
+    // 追記・上書きモードを引数で受け取る
+    mode: &str,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let ipv4_file = format!("IPv4_{}.txt", country_code);
     let ipv6_file = format!("IPv6_{}.txt", country_code);
 
-    // 実際の書き込みを行うサブ関数呼び出し
-    write_file(&ipv4_file, ipv4_list)?;
-    write_file(&ipv6_file, ipv6_list)?;
+    // それぞれ書き込み処理を実行
+    write_single_ip_list(&ipv4_file, ipv4_list, mode)?;
+    write_single_ip_list(&ipv6_file, ipv6_list, mode)?;
 
     Ok(())
 }
 
-/// 実際にBTreeSetをテキストに変換し、ファイル書き込みする
-fn write_file(
-    path: &str,
+/// 1つのファイルに書き込むヘルパー関数
+/// 書き込み先を変更したい場合は、この関数を差し替えるだけにする設計が可能。
+fn write_single_ip_list<P: AsRef<Path>>(
+    path: P,
     nets: &BTreeSet<IpNet>,
+    mode: &str,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let now = Local::now();
     let formatted_header = format!(
@@ -35,12 +42,26 @@ fn write_file(
         now.minute()
     );
 
-    // BTreeSetの順序をそのまま利用
     let lines: Vec<String> = nets.iter().map(|net| net.to_string()).collect();
     let content = format!("{}{}", formatted_header, lines.join("\n"));
 
-    fs::write(path, content)?;
-    println!("ファイルに書き込みました: {}", path);
+    match mode {
+        "append" => {
+            // 追記モードでファイルを開く
+            // 無ければ新規作成
+            let mut file = OpenOptions::new().create(true).append(true).open(&path)?;
+            file.write_all(content.as_bytes())?;
+            println!("[output] Appended IP list to: {}", path.as_ref().display());
+        }
+        _ => {
+            // デフォルトは上書き
+            fs::write(&path, &content)?;
+            println!(
+                "[output] Wrote (overwrite) IP list to: {}",
+                path.as_ref().display()
+            );
+        }
+    }
 
     Ok(())
 }
