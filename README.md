@@ -15,11 +15,15 @@
 - 最初の1行目には実行日時が記載されます。
 
 ## 情報の取得元
-- [AFRINIC](https://ftp.afrinic.net/pub/stats/afrinic/delegated-afrinic-extended-latest)
-- [LACNIC](https://ftp.lacnic.net/pub/stats/lacnic/delegated-lacnic-extended-latest)
-- [RIPE NCC](https://ftp.ripe.net/pub/stats/ripencc/delegated-ripencc-extended-latest)
-- [APNIC](https://ftp.apnic.net/pub/stats/apnic/delegated-apnic-extended-latest)
-- [ARIN](https://ftp.arin.net/pub/stats/arin/delegated-arin-extended-latest)
+- `-c`を指定した場合の取得元
+  - [AFRINIC](https://ftp.afrinic.net/pub/stats/afrinic/delegated-afrinic-extended-latest)
+  - [LACNIC](https://ftp.lacnic.net/pub/stats/lacnic/delegated-lacnic-extended-latest)
+  - [RIPE NCC](https://ftp.ripe.net/pub/stats/ripencc/delegated-ripencc-extended-latest)
+  - [APNIC](https://ftp.apnic.net/pub/stats/apnic/delegated-apnic-extended-latest)
+  - [ARIN](https://ftp.arin.net/pub/stats/arin/delegated-arin-extended-latest)
+
+- `-a`を指定した場合の取得元
+  - `whois.radb.net`
 
 ## 使い方
 ### インストール
@@ -28,18 +32,27 @@ $ cargo install fetch-ccip
 ```
 
 ### 実行方法
-- `-c`の引数がない場合はエラーが発生します。
+- `-c`か`-a`の引数がない場合はエラーが発生します。
 ```bash
 $ fet-ip -c jp us
 ```
 
+```bash
+$ fet-ip -a AS0000 AS1234
+```
+
 ### オプション
 - `-c` : 国コードを指定します。複数指定可能です。
+- `-a` : AS番号を指定します。複数指定可能です。
 - `-h` : ヘルプを表示します。
 - `-v` : バージョンを表示します。
 - `-m` : ファイル出力モードの選択できます。「追記」または「上書き」を選択できます。指定しなかった場合は「上書き」が選択されます。
   - `append` : 追記モード
   - `overwrite` : 上書きモード
+
+- **注意事項**<br>
+`-c`か`-a`のどちらか一方は必ず指定してください。
+指定しなかった場合はエラーが発生します。
 
 ## ライセンス
 [MIT License](./LICENSE)

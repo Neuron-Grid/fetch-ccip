@@ -1,3 +1,4 @@
+pub mod asn;
 pub mod fetch;
 pub mod output;
 pub mod parse;
