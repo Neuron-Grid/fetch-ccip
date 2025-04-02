@@ -1,7 +1,7 @@
 use clap::Parser;
-use fetch_some_ip::asn::process_as_numbers;
-use fetch_some_ip::fetch::fetch_with_retry;
-use fetch_some_ip::process::process_country_code;
+use fetch_ccip::asn::process_as_numbers;
+use fetch_ccip::fetch::fetch_with_retry;
+use fetch_ccip::process::process_country_code;
 use reqwest::Client;
 use tokio::task::JoinHandle;
 
