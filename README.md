@@ -1,6 +1,11 @@
 ## important
-このCLIアプリはfetch-ccipからfire-scopeに改名されます。
+このCLIアプリはfetch-ccipから[fire-scope](https://github.com/Neuron-Grid/fire-scope)に改名されます。
 また、gitリポジトリも移動します。
+今後、fetch-ccipは更新されませんので、fire-scopeを使用してください。
+
+This CLI application will be renamed from fetch-ccip to fire-scope.
+The Git repository will also be relocated.
+Since fetch-ccip will no longer receive updates, please use fire-scope going forward.
 
 ## fetch-ccip
 本ツールは、各地域インターネットレジストリ (RIR) が提供する最新のアドレス割り当てファイルを取得し、指定された国コードに合致するIPv4/v6アドレスブロックをテキストファイルにまとめて出力するためのCLIアプリです。
